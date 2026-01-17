@@ -1,46 +1,27 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
 export default function NodesPage() {
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Infrastructure</h2>
-      </div>
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-6">Infrastructure Nodes</h1>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Main VPS Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Main VPS</CardTitle>
-            <Badge variant="outline" className="text-yellow-500 border-yellow-500">
-              Waiting for Agent
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-mono">139.162.186.62</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Location: Primary Media Hub
-            </p>
-            <div className="mt-4 p-2 bg-black rounded text-[10px] text-green-400 font-mono overflow-x-auto">
-              curl -sSL https://ghostports.com/install.sh | bash
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6">
+        {/* Main VPS */}
+        <div className="p-6 border rounded-lg bg-white shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Main VPS</h2>
+            <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">Waiting for Agent</span>
+          </div>
+          <p className="text-2xl font-mono mb-2">139.162.186.62</p>
+          <p className="text-gray-500 text-sm mb-4">Primary Media Storage</p>
+          <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs">
+            curl -sSL https://ghostports.com/install.sh | bash
+          </div>
+        </div>
 
-        {/* Shield VPS Placeholder */}
-        <Card className="opacity-50 border-dashed">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Shield VPS</CardTitle>
-            <Badge variant="secondary">Pending Setup</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">172.237.116.250</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Status: Not Connected
-            </p>
-          </CardContent>
-        </Card>
+        {/* Shield VPS */}
+        <div className="p-6 border border-dashed rounded-lg bg-gray-50 opacity-60">
+          <h2 className="text-xl font-semibold text-gray-400">Shield VPS</h2>
+          <p className="text-2xl font-mono text-gray-400">172.237.116.250</p>
+        </div>
       </div>
     </div>
   );
