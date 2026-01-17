@@ -29,8 +29,8 @@ export async function generateShieldedLink(rawUrl: string, settings: { ipLock: b
   const encodedUrl = Buffer.from(rawUrl).toString('base64');
   
   // 4. Construct the Sanitized URL
-  // Note: We use the encodedUrl in the query string
-  const shieldedUrl = `http://${bestIp}/stream_proxy.php?url=${encodeURIComponent(encodedUrl)}&token=${hmac}&expires=${expiryTime}`;
+  // ADDED: &ipLock=${ipLockStr} so the Shield knows to enforce the lock
+  const shieldedUrl = `http://${bestIp}/stream_proxy.php?url=${encodeURIComponent(encodedUrl)}&token=${hmac}&expires=${expiryTime}&ipLock=${ipLockStr}`;
 
   return {
     url: shieldedUrl,
