@@ -24,9 +24,13 @@ export async function generateShieldedLink(rawUrl: string, settings: { ipLock: b
     .createHmac('sha256', secret)
     .update(tokenPayload)
     .digest('hex');
+
+  // 3. BASE64 ENCODE the rawUrl to hide it from the user
+  const encodedUrl = Buffer.from(rawUrl).toString('base64');
   
-  // 3. Construct the Sanitized URL pointing to your Shield VPS
-  const shieldedUrl = `http://${bestIp}/stream_proxy.php?url=${encodeURIComponent(rawUrl)}&token=${hmac}&expires=${expiryTime}`;
+  // 4. Construct the Sanitized URL
+  // Note: We use the encodedUrl in the query string
+  const shieldedUrl = `http://${bestIp}/stream_proxy.php?url=${encodeURIComponent(encodedUrl)}&token=${hmac}&expires=${expiryTime}`;
 
   return {
     url: shieldedUrl,
