@@ -5,8 +5,12 @@ import {
   text,
   timestamp,
   integer,
+  bigint,    
+  boolean,   
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+
+// --- EXISTING TABLES ---
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -43,6 +47,36 @@ export const teamMembers = pgTable('team_members', {
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
 });
 
+// --- NEW: NODES TABLE (KEEPING YOUR VPS DATA SAFE) ---
+
+export const nodes = pgTable('nodes', {
+  id: serial('id').primaryKey(),
+  ip: varchar('ip', { length: 45 }).notNull(),
+  name: varchar('name', { length: 100 }), // e.g., "Shield-01"
+  status: varchar('status', { length: 20 }).default('active'),
+  currentLoad: integer('current_load').default(0), // Users currently on this node
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- NEW: PROJECT X SHIELDED LINKS TABLE ---
+
+export const shieldedLinks = pgTable('shielded_links', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  userEmail: text('user_email').notNull(),
+  originalUrl: text('original_url').notNull(),
+  shieldedUrl: text('shielded_url').notNull(),
+  token: text('token').unique().notNull(),
+  expiryTime: bigint('expiry_time', { mode: 'number' }).notNull(),
+  ipLock: boolean('ip_lock').default(true),
+  clickCount: integer('click_count').default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// --- ACTIVITY LOGS & INVITATIONS ---
+
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -68,15 +102,25 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
-export const teamsRelations = relations(teams, ({ many }) => ({
-  teamMembers: many(teamMembers),
-  activityLogs: many(activityLogs),
-  invitations: many(invitations),
-}));
+// --- UPDATED RELATIONS ---
 
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  shieldedLinks: many(shieldedLinks),
+}));
+
+export const shieldedLinksRelations = relations(shieldedLinks, ({ one }) => ({
+  user: one(users, {
+    fields: [shieldedLinks.userId],
+    references: [users.id],
+  }),
+}));
+
+export const teamsRelations = relations(teams, ({ many }) => ({
+  teamMembers: many(teamMembers),
+  activityLogs: many(activityLogs),
+  invitations: many(invitations),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -112,31 +156,9 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type Team = typeof teams.$inferSelect;
-export type NewTeam = typeof teams.$inferInsert;
-export type TeamMember = typeof teamMembers.$inferSelect;
-export type NewTeamMember = typeof teamMembers.$inferInsert;
-export type ActivityLog = typeof activityLogs.$inferSelect;
-export type NewActivityLog = typeof activityLogs.$inferInsert;
-export type Invitation = typeof invitations.$inferSelect;
-export type NewInvitation = typeof invitations.$inferInsert;
-export type TeamDataWithMembers = Team & {
-  teamMembers: (TeamMember & {
-    user: Pick<User, 'id' | 'name' | 'email'>;
-  })[];
-};
+// --- TYPES & ENUMS ---
 
-export enum ActivityType {
-  SIGN_UP = 'SIGN_UP',
-  SIGN_IN = 'SIGN_IN',
-  SIGN_OUT = 'SIGN_OUT',
-  UPDATE_PASSWORD = 'UPDATE_PASSWORD',
-  DELETE_ACCOUNT = 'DELETE_ACCOUNT',
-  UPDATE_ACCOUNT = 'UPDATE_ACCOUNT',
-  CREATE_TEAM = 'CREATE_TEAM',
-  REMOVE_TEAM_MEMBER = 'REMOVE_TEAM_MEMBER',
-  INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
-  ACCEPT_INVITATION = 'ACCEPT_INVITATION',
-}
+export type User = typeof users.$inferSelect;
+export type Team = typeof teams.$inferSelect;
+export type Node = typeof nodes.$inferSelect; // Added
+export type ShieldedLink = typeof shieldedLinks.$inferSelect;
