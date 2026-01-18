@@ -1,71 +1,49 @@
-'use client';
+import { getLinkHistory } from '@/lib/actions/links';
+import { Copy, ExternalLink, MousePointerClick } from 'lucide-react';
 
-import { useState } from 'react';
-import { generateShieldedLink } from '@/lib/actions/links';
-
-export default function LinkFactory() {
-  const [rawUrl, setRawUrl] = useState('');
-  const [shieldedUrl, setShieldedUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    const result = await generateShieldedLink(rawUrl, { ipLock: true, expiry: 24 });
-    setShieldedUrl(result.url);
-    setLoading(false);
-  };
+export default async function HistorySection() {
+  const history = await getLinkHistory();
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8">
-      {/* ZONE 1: THE LINK FACTORY (Top) */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-        <h2 className="text-xl font-bold mb-4 text-white">Link Factory</h2>
-        <div className="flex flex-col gap-4">
-          <input 
-            type="text" 
-            placeholder="Paste Raw Destination URL (e.g. s3://my-bucket/file.mp4)"
-            className="w-full bg-slate-800 border-slate-700 text-white p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            value={rawUrl}
-            onChange={(e) => setRawUrl(e.target.value)}
-          />
-          <button 
-            onClick={handleGenerate}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all"
-          >
-            {loading ? 'Generating Shield...' : 'Generate Sanitized Link'}
-          </button>
-        </div>
-
-        {shieldedUrl && (
-          <div className="mt-6 p-4 bg-green-900/20 border border-green-500/50 rounded-lg animate-in fade-in slide-in-from-top-4">
-            <p className="text-xs text-green-400 font-mono mb-2">SHIELDED URL READY:</p>
-            <div className="flex gap-2">
-              <input readOnly value={shieldedUrl} className="w-full bg-black/40 p-2 rounded font-mono text-sm text-white" />
-              <button 
-                onClick={() => navigator.clipboard.writeText(shieldedUrl)}
-                className="bg-slate-700 px-4 rounded text-white text-sm"
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ZONE 2: ANALYTICS CARDS (Middle) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-          <p className="text-slate-400 text-sm">Active Shields</p>
-          <p className="text-2xl font-bold text-white">2 / 5</p>
-        </div>
-        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-          <p className="text-slate-400 text-sm">Total Bandwidth</p>
-          <p className="text-2xl font-bold text-blue-400">1.2 Gbps</p>
-        </div>
-        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-          <p className="text-slate-400 text-sm">Links Revoked</p>
-          <p className="text-2xl font-bold text-red-400">0</p>
+    <div className="mt-8 rounded-xl border bg-card text-card-foreground shadow">
+      <div className="p-6 border-b">
+        <h3 className="text-lg font-semibold leading-none tracking-tight">Recent Shielded Links</h3>
+      </div>
+      <div className="p-0">
+        <div className="relative w-full overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="bg-muted/50">
+              <tr className="border-b transition-colors">
+                <th className="h-10 px-4 text-left font-medium">Original Link</th>
+                <th className="h-10 px-4 text-left font-medium">Status</th>
+                <th className="h-10 px-4 text-center font-medium">Clicks</th>
+                <th className="h-10 px-4 text-right font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {history.map((link) => (
+                <tr key={link.id} className="hover:bg-muted/50">
+                  <td className="p-4 font-mono text-xs max-w-[200px] truncate">{link.originalUrl}</td>
+                  <td className="p-4">
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <MousePointerClick className="w-3 h-3" />
+                      {link.clickCount}
+                    </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button className="inline-flex items-center justify-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground border">
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
