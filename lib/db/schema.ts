@@ -1,108 +1,142 @@
-import {
-  pgTable,
-  serial,
-  varchar,
-  text,
-  timestamp,
-  integer,
-  bigint,    
-  boolean,   
-} from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { 
+  pgTable, 
+  unique, 
+  serial, 
+  varchar, 
+  timestamp, 
+  text, 
+  foreignKey, 
+  integer, 
+  bigint, 
+  boolean, 
+  doublePrecision 
+} from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 
-// --- EXISTING TABLES ---
+// --- CORE STARTER TABLES ---
 
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  role: varchar('role', { length: 20 }).notNull().default('member'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  deletedAt: timestamp('deleted_at'),
-});
+export const teams = pgTable("teams", {
+  id: serial().primaryKey().notNull(),
+  name: varchar({ length: 100 }).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeProductId: text("stripe_product_id"),
+  planName: varchar("plan_name", { length: 50 }),
+  subscriptionStatus: varchar("subscription_status", { length: 20 }),
+}, (table) => [
+  unique("teams_stripe_customer_id_unique").on(table.stripeCustomerId),
+  unique("teams_stripe_subscription_id_unique").on(table.stripeSubscriptionId),
+]);
 
-export const teams = pgTable('teams', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }).notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  stripeCustomerId: text('stripe_customer_id').unique(),
-  stripeSubscriptionId: text('stripe_subscription_id').unique(),
-  stripeProductId: text('stripe_product_id'),
-  planName: varchar('plan_name', { length: 50 }),
-  subscriptionStatus: varchar('subscription_status', { length: 20 }),
-});
+export const users = pgTable("users", {
+  id: serial().primaryKey().notNull(),
+  name: varchar({ length: 100 }),
+  email: varchar({ length: 255 }).notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: varchar({ length: 20 }).default('member').notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+  unique("users_email_unique").on(table.email),
+]);
 
-export const teamMembers = pgTable('team_members', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
-  role: varchar('role', { length: 50 }).notNull(),
-  joinedAt: timestamp('joined_at').notNull().defaultNow(),
-});
+export const teamMembers = pgTable("team_members", {
+  id: serial().primaryKey().notNull(),
+  userId: integer("user_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  role: varchar({ length: 50 }).notNull(),
+  joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "team_members_user_id_users_id_fk"
+  }),
+  foreignKey({
+    columns: [table.teamId],
+    foreignColumns: [teams.id],
+    name: "team_members_team_id_teams_id_fk"
+  }),
+]);
 
-// --- NEW: NODES TABLE (KEEPING YOUR VPS DATA SAFE) ---
+// --- NODES (YOUR SHIELD VPS LIST) ---
 
-export const nodes = pgTable('nodes', {
-  id: serial('id').primaryKey(),
-  ip: varchar('ip', { length: 45 }).notNull(),
-  name: varchar('name', { length: 100 }), // e.g., "Shield-01"
-  status: varchar('status', { length: 20 }).default('active'),
-  currentLoad: integer('current_load').default(0), // Users currently on this node
-  createdAt: timestamp('created_at').defaultNow(),
-});
+export const nodes = pgTable("nodes", {
+  id: serial().primaryKey().notNull(),
+  ip: varchar({ length: 45 }).notNull(),
+  name: varchar({ length: 255 }),
+  status: varchar({ length: 50 }).default('offline'),
+  lastSeen: timestamp("last_seen", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+  bandwidthUsage: doublePrecision("bandwidth_usage").default(0),
+}, (table) => [
+  unique("nodes_ip_key").on(table.ip),
+]);
 
-// --- NEW: PROJECT X SHIELDED LINKS TABLE ---
+// --- SHIELDED LINKS (PROJECT X) ---
 
-export const shieldedLinks = pgTable('shielded_links', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id),
-  userEmail: text('user_email').notNull(),
-  originalUrl: text('original_url').notNull(),
-  shieldedUrl: text('shielded_url').notNull(),
-  token: text('token').unique().notNull(),
-  expiryTime: bigint('expiry_time', { mode: 'number' }).notNull(),
-  ipLock: boolean('ip_lock').default(true),
-  clickCount: integer('click_count').default(0),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+export const shieldedLinks = pgTable("shielded_links", {
+  id: serial().primaryKey().notNull(),
+  userId: integer("user_id").references(() => users.id), // Added to link to user
+  userEmail: text("user_email").notNull(),
+  originalUrl: text("original_url").notNull(),
+  shieldedUrl: text("shielded_url").notNull(),
+  token: text().notNull(),
+  expiryTime: bigint("expiry_time", { mode: "number" }).notNull(),
+  ipLock: boolean("ip_lock").default(true),
+  clickCount: integer("click_count").default(0),
+  createdAt: timestamp("created_at", { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  unique("shielded_links_token_key").on(table.token),
+]);
 
-// --- ACTIVITY LOGS & INVITATIONS ---
+// --- LOGS & INVITES ---
 
-export const activityLogs = pgTable('activity_logs', {
-  id: serial('id').primaryKey(),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
-  userId: integer('user_id').references(() => users.id),
-  action: text('action').notNull(),
-  timestamp: timestamp('timestamp').notNull().defaultNow(),
-  ipAddress: varchar('ip_address', { length: 45 }),
-});
+export const activityLogs = pgTable("activity_logs", {
+  id: serial().primaryKey().notNull(),
+  teamId: integer("team_id").notNull(),
+  userId: integer("user_id"),
+  action: text().notNull(),
+  timestamp: timestamp({ mode: 'string' }).defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+}, (table) => [
+  foreignKey({
+    columns: [table.teamId],
+    foreignColumns: [teams.id],
+    name: "activity_logs_team_id_teams_id_fk"
+  }),
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "activity_logs_user_id_users_id_fk"
+  }),
+]);
 
-export const invitations = pgTable('invitations', {
-  id: serial('id').primaryKey(),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
-  email: varchar('email', { length: 255 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull(),
-  invitedBy: integer('invited_by')
-    .notNull()
-    .references(() => users.id),
-  invitedAt: timestamp('invited_at').notNull().defaultNow(),
-  status: varchar('status', { length: 20 }).notNull().default('pending'),
-});
+export const invitations = pgTable("invitations", {
+  id: serial().primaryKey().notNull(),
+  teamId: integer("team_id").notNull(),
+  email: varchar({ length: 255 }).notNull(),
+  role: varchar({ length: 50 }).notNull(),
+  invitedBy: integer("invited_by").notNull(),
+  invitedAt: timestamp("invited_at", { mode: 'string' }).defaultNow().notNull(),
+  status: varchar({ length: 20 }).default('pending').notNull(),
+}, (table) => [
+  foreignKey({
+    columns: [table.teamId],
+    foreignColumns: [teams.id],
+    name: "invitations_team_id_teams_id_fk"
+  }),
+  foreignKey({
+    columns: [table.invitedBy],
+    foreignColumns: [users.id],
+    name: "invitations_invited_by_users_id_fk"
+  }),
+]);
 
-// --- UPDATED RELATIONS ---
+// --- RELATIONS ---
 
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
@@ -117,48 +151,10 @@ export const shieldedLinksRelations = relations(shieldedLinks, ({ one }) => ({
   }),
 }));
 
-export const teamsRelations = relations(teams, ({ many }) => ({
-  teamMembers: many(teamMembers),
-  activityLogs: many(activityLogs),
-  invitations: many(invitations),
-}));
-
-export const invitationsRelations = relations(invitations, ({ one }) => ({
-  team: one(teams, {
-    fields: [invitations.teamId],
-    references: [teams.id],
-  }),
-  invitedBy: one(users, {
-    fields: [invitations.invitedBy],
-    references: [users.id],
-  }),
-}));
-
-export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
-  user: one(users, {
-    fields: [teamMembers.userId],
-    references: [users.id],
-  }),
-  team: one(teams, {
-    fields: [teamMembers.teamId],
-    references: [teams.id],
-  }),
-}));
-
-export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
-  team: one(teams, {
-    fields: [activityLogs.teamId],
-    references: [teams.id],
-  }),
-  user: one(users, {
-    fields: [activityLogs.userId],
-    references: [users.id],
-  }),
-}));
-
-// --- TYPES & ENUMS ---
+// --- TYPES ---
 
 export type User = typeof users.$inferSelect;
 export type Team = typeof teams.$inferSelect;
-export type Node = typeof nodes.$inferSelect; // Added
+export type Node = typeof nodes.$inferSelect;
 export type ShieldedLink = typeof shieldedLinks.$inferSelect;
+export type NewShieldedLink = typeof shieldedLinks.$inferInsert;
